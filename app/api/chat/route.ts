@@ -6,8 +6,11 @@ import { getPostsContext } from "@/src/constants/posts";
 import fs from "fs";
 import path from "path";
 
-/** Modelo mais econômico da família Claude 3 (Haiku). */
-const ANTHROPIC_MODEL = "claude-3-haiku-20240307";
+/**
+ * Haiku mais recente na API (substitui claude-3-haiku-20240307, depreciado).
+ * Alias estável: https://docs.anthropic.com/en/docs/about-claude/models
+ */
+const ANTHROPIC_MODEL = "claude-haiku-4-5";
 
 /** Vercel: até 60s no Pro; no Hobby o teto é 10s — contexto truncado abaixo ajuda a caber no tempo. */
 export const maxDuration = 60;
@@ -145,12 +148,8 @@ export async function POST(req: Request) {
     return Response.json({ content: out });
   } catch (err) {
     console.error("[api/chat]", err);
-    const msg = err instanceof Error ? err.message : "Erro ao processar.";
-    return Response.json(
-      {
-        content: `Desculpe, ocorreu um erro. ${msg} Você pode nos contactar pelo WhatsApp (31) 3236-1498.`,
-      },
-      { status: 500 }
-    );
+    const content =
+      "Desculpe, não consegui responder agora. Tente de novo em alguns instantes ou fale conosco pelo WhatsApp (31) 3236-1498.";
+    return Response.json({ content }, { status: 500 });
   }
 }
