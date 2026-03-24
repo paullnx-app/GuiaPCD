@@ -105,6 +105,7 @@ export default function ChatWindow() {
   const panelRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const summarySentRef = useRef(false);
+  const ignoreOutsideUntilRef = useRef(0);
 
   useEffect(() => {
     setSessionId(getOrCreateSessionId());
@@ -117,13 +118,26 @@ export default function ChatWindow() {
     });
   }, [messages, isLoading]);
 
-  // Fecha ao rolar a página ou clicar fora do chat
+  // Ao abrir: ignora cliques/toques externos por um instante (evita fechar no mesmo gesto no mobile)
+  useEffect(() => {
+    if (open) {
+      ignoreOutsideUntilRef.current = Date.now() + 450;
+    }
+  }, [open]);
+
+  // Desktop: fecha ao rolar a página. Mobile: NÃO — teclado virtual e barra do browser alteram scrollY e fechavam o chat.
+  // Fora do painel: pointerdown (melhor que só mousedown no touch) + período de graça após abrir.
   useEffect(() => {
     if (!open) return;
 
     let lastY = window.scrollY;
 
+    function isMobileViewport() {
+      return window.matchMedia("(max-width: 767px)").matches;
+    }
+
     function onScroll() {
+      if (isMobileViewport()) return;
       const delta = Math.abs(window.scrollY - lastY);
       if (delta > 80) {
         handleClose();
@@ -131,20 +145,19 @@ export default function ChatWindow() {
       lastY = window.scrollY;
     }
 
-    function onClickOutside(e: MouseEvent) {
+    function onPointerDownOutside(e: PointerEvent) {
+      if (Date.now() < ignoreOutsideUntilRef.current) return;
       const target = e.target as Node;
-      const insidePanel = panelRef.current?.contains(target);
-      const insideButton = buttonRef.current?.contains(target);
-      if (!insidePanel && !insideButton) {
-        handleClose();
-      }
+      if (panelRef.current?.contains(target)) return;
+      if (buttonRef.current?.contains(target)) return;
+      handleClose();
     }
 
     window.addEventListener("scroll", onScroll, { passive: true });
-    document.addEventListener("mousedown", onClickOutside);
+    document.addEventListener("pointerdown", onPointerDownOutside, true);
     return () => {
       window.removeEventListener("scroll", onScroll);
-      document.removeEventListener("mousedown", onClickOutside);
+      document.removeEventListener("pointerdown", onPointerDownOutside, true);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
@@ -225,18 +238,19 @@ export default function ChatWindow() {
         {open && (
           <motion.div
             ref={panelRef}
-            initial={{ opacity: 0, y: 20, scale: 0.95 }}
+            initial={{ opacity: 0, y: 24, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 12, scale: 0.97 }}
+            exit={{ opacity: 0, y: 16, scale: 0.99 }}
             transition={{ duration: 0.22, ease: "easeOut" }}
-            className="fixed bottom-20 right-4 z-[9999] w-[400px] max-w-[calc(100vw-2rem)] overflow-hidden rounded-2xl shadow-2xl sm:right-6"
+            className="fixed z-[99999] overflow-hidden shadow-2xl max-md:inset-x-0 max-md:bottom-0 max-md:left-0 max-md:right-0 max-md:top-auto max-md:w-full max-md:max-w-none max-md:rounded-b-none max-md:rounded-t-2xl max-md:border-x-0 max-md:border-b-0 max-md:pb-[max(0.75rem,env(safe-area-inset-bottom))] md:bottom-20 md:right-4 md:w-[400px] md:max-w-[calc(100vw-2rem)] md:rounded-2xl sm:md:right-6"
             style={{
               background: "linear-gradient(180deg, #0f172a 0%, #0c1528 100%)",
               border: "1px solid rgba(56,189,248,0.15)",
               boxShadow: "0 24px 60px rgba(0,0,0,0.7), 0 0 0 1px rgba(52,211,153,0.08)",
+              maxHeight: "min(85dvh, calc(100dvh - 5.5rem))",
             }}
           >
-            <div className="flex flex-col">
+            <div className="flex max-h-[inherit] min-h-0 flex-col">
               {/* Header */}
               <div
                 className="flex items-center justify-between px-4 py-3.5"
@@ -274,7 +288,7 @@ export default function ChatWindow() {
               {/* Messages area */}
               <div
                 ref={scrollRef}
-                className="flex max-h-[380px] min-h-[260px] flex-1 flex-col gap-3 overflow-y-auto px-4 py-4"
+                className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-4 py-4 max-md:min-h-[180px] max-md:max-h-[45dvh] md:max-h-[380px] md:min-h-[260px]"
                 style={{ scrollbarWidth: "thin", scrollbarColor: "rgba(56,189,248,0.2) transparent" }}
               >
                 {messages.length === 0 && !error && (
@@ -418,7 +432,7 @@ export default function ChatWindow() {
           if (open) handleClose();
           else setOpen(true);
         }}
-        className="fixed bottom-4 right-4 z-[9999] flex h-14 w-14 items-center justify-center rounded-full sm:right-6"
+        className={`fixed z-[100000] flex h-14 w-14 items-center justify-center rounded-full max-md:bottom-[max(1rem,env(safe-area-inset-bottom))] max-md:right-4 md:bottom-4 md:right-4 sm:md:right-6 ${open ? "max-md:hidden" : ""}`}
         style={{
           background: open
             ? "rgba(30,41,59,0.95)"
