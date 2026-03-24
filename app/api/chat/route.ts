@@ -1,9 +1,13 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { createAnthropic } from "@ai-sdk/anthropic";
+import { generateText } from "ai";
 import { SITE_CONFIG_TEXT } from "@/src/constants/config";
 import { CHAT_RULES_BUNDLED } from "@/src/constants/chatRulesBundled";
 import { getPostsContext } from "@/src/constants/posts";
 import fs from "fs";
 import path from "path";
+
+/** Modelo mais econômico da família Claude 3 (Haiku). */
+const ANTHROPIC_MODEL = "claude-3-haiku-20240307";
 
 /** Vercel: até 60s no Pro; no Hobby o teto é 10s — contexto truncado abaixo ajuda a caber no tempo. */
 export const maxDuration = 60;
@@ -54,12 +58,46 @@ ${siteContext}
 Inclua a tag exata \`[CTA_WHATSAPP]\` **somente** quando as regras acima permitirem (pedido explícito de contato/orçamento/iniciar processo, ou uma única vez se não houver resposta no site e o visitante quiser canal direto). **Não** coloque essa tag em respostas informativas comuns. Não cole URLs de WhatsApp em toda resposta.`;
 }
 
+type ChatRole = "user" | "assistant";
+
+function buildAnthropicMessages(
+  history: unknown[],
+  latestUserMessage: string
+): { role: ChatRole; content: string }[] {
+  const raw: { role: ChatRole; content: string }[] = [];
+  for (const h of history) {
+    if (!h || typeof h !== "object") continue;
+    const role = (h as { role: string }).role;
+    const content = (h as { content: unknown }).content;
+    if (typeof content !== "string" || !content.trim()) continue;
+    if (role !== "user" && role !== "assistant") continue;
+    raw.push({ role, content: content.trim() });
+  }
+
+  const merged: { role: ChatRole; content: string }[] = [];
+  for (const m of raw) {
+    const last = merged[merged.length - 1];
+    if (last && last.role === m.role) {
+      last.content += "\n\n" + m.content;
+    } else {
+      merged.push({ ...m });
+    }
+  }
+
+  while (merged.length > 0 && merged[0].role === "assistant") {
+    merged.shift();
+  }
+
+  merged.push({ role: "user", content: latestUserMessage });
+  return merged;
+}
+
 export async function POST(req: Request) {
   try {
-    const apiKey = process.env.GEMINI_API_KEY?.trim();
+    const apiKey = process.env.ANTHROPIC_API_KEY?.trim();
     if (!apiKey) {
       return Response.json(
-        { error: "API do assistente não configurada." },
+        { error: "API do assistente não configurada (ANTHROPIC_API_KEY)." },
         { status: 500 }
       );
     }
@@ -86,42 +124,25 @@ export async function POST(req: Request) {
 
     const siteContext = getSiteContext();
     const chatRules = loadChatRules();
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({
-      model: "gemini-2.5-flash",
-      systemInstruction: buildSystemInstruction(chatRules, siteContext),
+    const system = buildSystemInstruction(chatRules, siteContext);
+    const messages = buildAnthropicMessages(history, message);
+
+    const provider = createAnthropic({ apiKey });
+    const { text } = await generateText({
+      model: provider(ANTHROPIC_MODEL),
+      system,
+      messages,
     });
 
-    const chatHistory = history
-      .filter(
-        (h: unknown) =>
-          h &&
-          typeof h === "object" &&
-          "role" in h &&
-          "content" in h &&
-          typeof (h as { role: string; content: string }).content === "string"
-      )
-      .map((h: { role: string; content: string }) => ({
-        role: h.role === "assistant" ? "model" : "user",
-        parts: [{ text: (h as { content: string }).content }],
-      }));
-
-    const chat = model.startChat({ history: chatHistory });
-    const result = await chat.sendMessage(message);
-    const response = result.response;
-    const candidate = response.candidates?.[0];
-    const text =
-      candidate?.content?.parts
-        ?.map((p) => ("text" in p ? p.text : ""))
-        .join("")
-        .trim() ||
+    const out =
+      text?.trim() ||
       "Não foi possível gerar uma resposta. Entre em contato pelo WhatsApp (31) 3236-1498.";
 
     if (sessionId) {
       sessionMessageCount.set(sessionId, count + 1);
     }
 
-    return Response.json({ content: text });
+    return Response.json({ content: out });
   } catch (err) {
     console.error("[api/chat]", err);
     const msg = err instanceof Error ? err.message : "Erro ao processar.";

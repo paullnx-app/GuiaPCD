@@ -1,5 +1,5 @@
 /**
- * Texto de contexto do site para o assistente virtual (Gemini).
+ * Texto de contexto do site para o assistente virtual (LLM).
  * Usado em app/api/chat/route.ts para montar o siteContext.
  */
 

@@ -11,7 +11,6 @@
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.58",
     "@ai-sdk/react": "^3.0.118",
-    "@google/generative-ai": "^0.24.1",
     "ai": "^6.0.116",
     "framer-motion": "^12.36.0",
     "gray-matter": "^4.0.3",

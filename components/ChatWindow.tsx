@@ -106,10 +106,62 @@ export default function ChatWindow() {
   const buttonRef = useRef<HTMLButtonElement>(null);
   const summarySentRef = useRef(false);
   const ignoreOutsideUntilRef = useRef(0);
+  /** Mobile + teclado iOS: ancora o painel ao visualViewport (evita faixa escura entre input e teclado). */
+  const [mobileVVLayout, setMobileVVLayout] = useState<{
+    bottomPx: number;
+    maxHeightPx?: number;
+  } | null>(null);
 
   useEffect(() => {
     setSessionId(getOrCreateSessionId());
   }, []);
+
+  useEffect(() => {
+    if (!open) {
+      setMobileVVLayout(null);
+      return;
+    }
+
+    const mq = window.matchMedia("(max-width: 767px)");
+    const vp = window.visualViewport;
+    if (!vp) {
+      setMobileVVLayout({ bottomPx: 0 });
+      return;
+    }
+
+    function syncVisualViewport() {
+      const viewport = window.visualViewport;
+      if (!mq.matches) {
+        setMobileVVLayout(null);
+        return;
+      }
+      if (!viewport) {
+        setMobileVVLayout({ bottomPx: 0 });
+        return;
+      }
+      const inset = Math.max(
+        0,
+        window.innerHeight - viewport.height - viewport.offsetTop
+      );
+      const maxHeightPx =
+        inset > 24
+          ? Math.max(100, Math.round(viewport.height) - 20)
+          : undefined;
+      setMobileVVLayout({ bottomPx: inset, maxHeightPx });
+    }
+
+    syncVisualViewport();
+    vp.addEventListener("resize", syncVisualViewport);
+    vp.addEventListener("scroll", syncVisualViewport);
+    window.addEventListener("resize", syncVisualViewport);
+    mq.addEventListener("change", syncVisualViewport);
+    return () => {
+      vp.removeEventListener("resize", syncVisualViewport);
+      vp.removeEventListener("scroll", syncVisualViewport);
+      window.removeEventListener("resize", syncVisualViewport);
+      mq.removeEventListener("change", syncVisualViewport);
+    };
+  }, [open]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({
@@ -247,7 +299,13 @@ export default function ChatWindow() {
               background: "linear-gradient(180deg, #0f172a 0%, #0c1528 100%)",
               border: "1px solid rgba(56,189,248,0.15)",
               boxShadow: "0 24px 60px rgba(0,0,0,0.7), 0 0 0 1px rgba(52,211,153,0.08)",
-              maxHeight: "min(85dvh, calc(100dvh - 5.5rem))",
+              maxHeight:
+                mobileVVLayout?.maxHeightPx != null
+                  ? `${mobileVVLayout.maxHeightPx}px`
+                  : "min(85dvh, calc(100dvh - 5.5rem))",
+              ...(mobileVVLayout != null
+                ? { bottom: mobileVVLayout.bottomPx }
+                : {}),
             }}
           >
             <div className="flex max-h-[inherit] min-h-0 flex-col">
@@ -288,7 +346,7 @@ export default function ChatWindow() {
               {/* Messages area */}
               <div
                 ref={scrollRef}
-                className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-4 py-4 max-md:min-h-[180px] max-md:max-h-[45dvh] md:max-h-[380px] md:min-h-[260px]"
+                className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-4 py-4 max-md:min-h-[120px] md:max-h-[380px] md:min-h-[260px]"
                 style={{ scrollbarWidth: "thin", scrollbarColor: "rgba(56,189,248,0.2) transparent" }}
               >
                 {messages.length === 0 && !error && (
