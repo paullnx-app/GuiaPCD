@@ -1,16 +1,35 @@
-export default function Testimonials() {
+import { getShuffledReviewsForDisplay, getGoogleMapsReviewUrl } from "@/lib/googleReviews";
+
+function Stars({ rating }: { rating: number }) {
+  const n = Math.round(Math.min(5, Math.max(0, rating)));
+  return (
+    <div className="flex gap-0.5 text-amber-400" aria-label={`${n} de 5 estrelas`}>
+      {Array.from({ length: 5 }, (_, i) => (
+        <span key={i}>{i < n ? "★" : "☆"}</span>
+      ))}
+    </div>
+  );
+}
+
+export default async function Testimonials() {
+  const reviews = await getShuffledReviewsForDisplay(3);
+  const mapsUrl = getGoogleMapsReviewUrl();
+
   const values = [
     {
       title: "Simplicidade",
-      description: "Traduzimos a linguagem jurídica e burocrática para o dia a dia, em uma conversa clara e direta.",
+      description:
+        "Traduzimos a linguagem jurídica e burocrática para o dia a dia, em uma conversa clara e direta.",
     },
     {
       title: "Parceria",
-      description: "Caminhamos junto com você, não apenas como prestadores de serviço, mas como aliados na conquista da isenção.",
+      description:
+        "Caminhamos junto com você, não apenas como prestadores de serviço, mas como aliados na conquista da isenção.",
     },
     {
       title: "Descomplicação",
-      description: "Organizamos as etapas, prazos e documentos para que o processo fique mais leve e previsível.",
+      description:
+        "Organizamos as etapas, prazos e documentos para que o processo fique mais leve e previsível.",
     },
   ];
 
@@ -24,23 +43,47 @@ export default function Testimonials() {
           <h2 className="mt-3 text-balance text-2xl font-semibold text-white md:text-3xl">
             Nossa missão é tornar a sua jornada menos cansativa e mais possível.
           </h2>
-          <p className="mt-3 max-w-3xl mx-auto text-sm text-sky-100/85 md:text-base">
-            Cada processo concluído é uma história de mobilidade, autonomia e dignidade recuperada. Veja
-            como esse trabalho impacta, na prática, a vida de quem passa por aqui.
+          <p className="mt-3 mx-auto max-w-3xl text-sm text-sky-100/85 md:text-base">
+            Cada processo concluído é uma história de mobilidade, autonomia e dignidade recuperada. A
+            seleção abaixo é exibida em ordem aleatória a cada visita.
           </p>
         </div>
 
-        <div className="mx-auto mb-12 max-w-4xl">
-          <div className="rounded-3xl border border-emerald-400/30 bg-gradient-to-br from-emerald-500/15 via-slate-900 to-slate-950 p-8 shadow-[0_24px_70px_rgba(15,23,42,0.9)]">
-            <blockquote className="mb-4 text-lg text-emerald-50/95 italic md:text-xl">
-              “O Guia PCD Despachante fez toda a diferença na minha busca por isenções fiscais. Eu não
-              fazia ideia por onde começar e, com a ajuda deles, consegui organizar documentos, cumprir
-              prazos e acompanhar tudo pelo WhatsApp. Hoje, tenho meu carro adaptado e pagando muito menos
-              imposto.”
-            </blockquote>
-            <p className="text-sm font-semibold text-emerald-100 md:text-base">— Cliente Guia PCD</p>
-          </div>
+        <div className="mx-auto mb-12 grid gap-6 md:grid-cols-3">
+          {reviews.map((r, index) => (
+            <div
+              key={`${r.author}-${index}-${r.text.slice(0, 24)}`}
+              className="flex flex-col rounded-2xl border border-emerald-400/25 bg-gradient-to-br from-emerald-500/10 via-slate-900/90 to-slate-950 p-6 shadow-[0_16px_40px_rgba(15,23,42,0.85)]"
+            >
+              <Stars rating={r.rating} />
+              <blockquote className="mt-3 flex-1 text-sm leading-relaxed text-emerald-50/95 md:text-base">
+                “{r.text}”
+              </blockquote>
+              <div className="mt-4 border-t border-sky-800/40 pt-3">
+                <p className="text-sm font-semibold text-white">— {r.author}</p>
+                {r.relativeTime ? (
+                  <p className="text-xs text-sky-400/70">{r.relativeTime}</p>
+                ) : null}
+                {r.source === "google" ? (
+                  <p className="mt-1 text-[10px] text-sky-500/50">Avaliação no Google</p>
+                ) : null}
+              </div>
+            </div>
+          ))}
         </div>
+
+        {mapsUrl ? (
+          <p className="mb-10 text-center text-xs text-sky-400/60">
+            <a
+              href={mapsUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline decoration-sky-600/50 underline-offset-2 hover:text-sky-300"
+            >
+              Ver perfil e avaliações no Google
+            </a>
+          </p>
+        ) : null}
 
         <div className="grid gap-6 md:grid-cols-3">
           {values.map((value, index) => (

@@ -7,8 +7,6 @@ import path from "path";
 const MAX_MESSAGES_PER_SESSION = 30;
 const sessionMessageCount = new Map<string, number>();
 
-const WHATSAPP_LINK = "https://api.whatsapp.com/send?phone=553132361498";
-
 function loadChatRules(): string {
   const rulesPath = path.join(process.cwd(), "chat-rules.md");
   if (fs.existsSync(rulesPath)) {
@@ -33,9 +31,9 @@ ${siteContext}
 
 ---
 
-## Link do WhatsApp
+## Botão de WhatsApp no chat
 
-Sempre que orientar o visitante a falar com a equipe, use este link clicável: ${WHATSAPP_LINK}`;
+Inclua a tag exata \`[CTA_WHATSAPP]\` **somente** quando as regras acima permitirem (pedido explícito de contato/orçamento/iniciar processo, ou uma única vez se não houver resposta no site e o visitante quiser canal direto). **Não** coloque essa tag em respostas informativas comuns. Não cole URLs de WhatsApp em toda resposta.`;
 }
 
 export async function POST(req: Request) {
