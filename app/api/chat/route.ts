@@ -1,23 +1,41 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { SITE_CONFIG_TEXT } from "@/src/constants/config";
+import { CHAT_RULES_BUNDLED } from "@/src/constants/chatRulesBundled";
 import { getPostsContext } from "@/src/constants/posts";
 import fs from "fs";
 import path from "path";
 
+/** Vercel: até 60s no Pro; no Hobby o teto é 10s — contexto truncado abaixo ajuda a caber no tempo. */
+export const maxDuration = 60;
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
+const MAX_SITE_CONTEXT_CHARS = 55000;
 const MAX_MESSAGES_PER_SESSION = 30;
 const sessionMessageCount = new Map<string, number>();
 
 function loadChatRules(): string {
   const rulesPath = path.join(process.cwd(), "chat-rules.md");
-  if (fs.existsSync(rulesPath)) {
-    return fs.readFileSync(rulesPath, "utf-8").trim();
+  try {
+    if (fs.existsSync(rulesPath)) {
+      const raw = fs.readFileSync(rulesPath, "utf-8").trim();
+      if (raw.length > 0) return raw;
+    }
+  } catch {
+    /* produção serverless sem arquivo no disco */
   }
-  return "";
+  return CHAT_RULES_BUNDLED.trim();
 }
 
 function getSiteContext(): string {
   const posts = getPostsContext();
-  return `${SITE_CONFIG_TEXT}\n\n---\n\n# Artigos do Blog\n\n${posts}`.trim();
+  let full = `${SITE_CONFIG_TEXT}\n\n---\n\n# Artigos do Blog\n\n${posts}`.trim();
+  if (full.length > MAX_SITE_CONTEXT_CHARS) {
+    full =
+      full.slice(0, MAX_SITE_CONTEXT_CHARS) +
+      "\n\n[Conteúdo truncado para resposta mais rápida em produção.]";
+  }
+  return full;
 }
 
 function buildSystemInstruction(chatRules: string, siteContext: string): string {
