@@ -68,3 +68,5 @@ Os formulários de lead enviam os dados para o e-mail configurado em `NEXT_PUBLI
 1. **Primeira vez:** o FormSubmit envia um **e-mail de ativação** para a caixa de entrada (ex.: contato@guiapcd.com.br). É obrigatório **clicar no link** desse e-mail para ativar; até lá, os envios não chegam como lead.
 2. **Confira o spam/lixo eletrônico:** o e-mail de ativação (e os próprios leads) podem cair na pasta de spam. Marque como “não é spam” se for o caso.
 3. Depois de ativar, os próximos envios passam a chegar normalmente no endereço configurado.
+
+O **resumo do chat** (ao fechar o assistente, com pelo menos 5 mensagens na conversa) também usa o FormSubmit **direto do navegador**, como o formulário de lead — o FormSubmit costuma falhar se o envio partir só do servidor.

@@ -2,13 +2,18 @@
 
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { MessageCircle, X, Send } from "lucide-react";
+import { MessageCircle, X, Send, Calendar } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import {
+  formatChatTranscript,
+  truncateTranscript,
+} from "@/src/lib/chatTranscript";
 
 const SESSION_ID_KEY = "guiapcd_chat_session_id";
 const WHATSAPP_URL = "https://api.whatsapp.com/send?phone=553132361498&text=Ol%C3%A1%2C%20vim%20pelo%20site%20e%20gostaria%20de%20mais%20informa%C3%A7%C3%B5es%20sobre%20isen%C3%A7%C3%A3o%20veicular%20PcD.";
 const CTA_TAG = "[CTA_WHATSAPP]";
+const CTA_CALENDLY_TAG = "[CTA_CALENDLY]";
 const MIN_MESSAGES_TO_REPORT = 5;
 
 function getOrCreateSessionId(): string {
@@ -19,6 +24,21 @@ function getOrCreateSessionId(): string {
     sessionStorage.setItem(SESSION_ID_KEY, id);
   }
   return id;
+}
+
+function CtaCalendly({ href }: { href: string }) {
+  if (!href) return null;
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="mt-3 flex w-full min-w-0 max-w-full items-center justify-center gap-2 break-words rounded-xl border border-sky-400/40 bg-sky-500/10 px-3 py-2.5 text-center text-sm font-semibold text-sky-100 transition-opacity hover:border-sky-300/60 hover:bg-sky-500/15 active:scale-95"
+    >
+      <Calendar className="h-4 w-4 shrink-0 text-sky-300" aria-hidden />
+      Agendar uma conversa
+    </a>
+  );
 }
 
 function CtaWhatsApp() {
@@ -41,9 +61,19 @@ function CtaWhatsApp() {
   );
 }
 
-function AssistantMessage({ content }: { content: string }) {
-  const hasCta = content.includes(CTA_TAG);
-  const cleanContent = content.replace(CTA_TAG, "").trim();
+function AssistantMessage({
+  content,
+  calendlyUrl,
+}: {
+  content: string;
+  calendlyUrl: string;
+}) {
+  const hasCalendlyCta = content.includes(CTA_CALENDLY_TAG);
+  const hasWhatsAppCta = content.includes(CTA_TAG);
+  const cleanContent = content
+    .replaceAll(CTA_CALENDLY_TAG, "")
+    .replaceAll(CTA_TAG, "")
+    .trim();
 
   return (
     <div className="min-w-0 max-w-full break-words [overflow-wrap:anywhere]">
@@ -82,7 +112,8 @@ function AssistantMessage({ content }: { content: string }) {
       >
         {cleanContent}
       </ReactMarkdown>
-      {hasCta && <CtaWhatsApp />}
+      {hasCalendlyCta && calendlyUrl ? <CtaCalendly href={calendlyUrl} /> : null}
+      {hasWhatsAppCta && <CtaWhatsApp />}
     </div>
   );
 }
@@ -101,6 +132,10 @@ export default function ChatWindow() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sessionId, setSessionId] = useState("");
+  /** URL do Calendly: lida em runtime via API para bater com o servidor (evita bundle sem NEXT_PUBLIC). */
+  const [calendlyUrl, setCalendlyUrl] = useState(
+    () => process.env.NEXT_PUBLIC_CALENDLY_URL?.trim() ?? ""
+  );
   const scrollRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -116,6 +151,21 @@ export default function ChatWindow() {
 
   useEffect(() => {
     setSessionId(getOrCreateSessionId());
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/calendly-url")
+      .then((res) => res.json())
+      .then((data: { url: string | null }) => {
+        if (cancelled || typeof data?.url !== "string") return;
+        const u = data.url.trim();
+        if (u) setCalendlyUrl(u);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -227,18 +277,54 @@ export default function ChatWindow() {
   async function sendSummary(msgs: Message[], sid: string) {
     if (summarySentRef.current) return;
     if (msgs.length < MIN_MESSAGES_TO_REPORT) return;
-    summarySentRef.current = true;
+
+    const leadEmail = process.env.NEXT_PUBLIC_LEAD_EMAIL?.trim();
+    if (!leadEmail) return;
+
+    const payloadMessages = msgs.map((m) => ({ role: m.role, content: m.content }));
+    const userMessages = payloadMessages.filter((m) => m.role === "user");
+    const transcript = truncateTranscript(formatChatTranscript(payloadMessages));
+    const now = new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" });
+
     try {
-      await fetch("/api/chat-summary", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          messages: msgs.map((m) => ({ role: m.role, content: m.content })),
-          sessionId: sid,
-        }),
-      });
-    } catch {
-      // silently fail — não interrompe a UX
+      const res = await fetch(
+        `https://formsubmit.co/ajax/${encodeURIComponent(leadEmail)}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          body: JSON.stringify({
+            _subject: `Chat Guia PCD - ${userMessages.length} perguntas (${now})`,
+            _captcha: false,
+            session: sid || "desconhecido",
+            data: now,
+            total_mensagens: String(msgs.length),
+            perguntas_visitante: String(userMessages.length),
+            transcricao: transcript,
+          }),
+        }
+      );
+
+      const data: { success?: string | boolean; message?: string } = await res
+        .json()
+        .catch(() => ({}));
+
+      const ok =
+        res.ok &&
+        data.success !== "false" &&
+        data.success !== false &&
+        String(data.success).toLowerCase() !== "false";
+
+      if (!ok) {
+        console.warn("[chat-summary] FormSubmit:", res.status, data);
+        return;
+      }
+
+      summarySentRef.current = true;
+    } catch (e) {
+      console.warn("[chat-summary]", e);
     }
   }
 
@@ -351,14 +437,27 @@ export default function ChatWindow() {
                     </p>
                   </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => handleClose()}
-                  className="shrink-0 rounded-lg p-1.5 text-sky-400/60 transition hover:bg-white/5 hover:text-white"
-                  aria-label="Fechar chat"
-                >
-                  <X className="h-4 w-4" />
-                </button>
+                <div className="flex shrink-0 items-center gap-1">
+                  {calendlyUrl ? (
+                    <a
+                      href={calendlyUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="max-w-[5.5rem] truncate rounded-lg px-1.5 py-1.5 text-center text-[10px] font-medium text-sky-300/90 underline-offset-2 hover:text-sky-200 hover:underline sm:max-w-[7.5rem] sm:px-2 sm:text-[11px]"
+                    >
+                      <span className="sm:hidden">Agendar</span>
+                      <span className="hidden sm:inline">Agendar conversa</span>
+                    </a>
+                  ) : null}
+                  <button
+                    type="button"
+                    onClick={() => handleClose()}
+                    className="shrink-0 rounded-lg p-1.5 text-sky-400/60 transition hover:bg-white/5 hover:text-white"
+                    aria-label="Fechar chat"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
 
               {/* Messages area */}
@@ -436,7 +535,7 @@ export default function ChatWindow() {
                       {msg.role === "user" ? (
                         <span className="whitespace-pre-wrap">{msg.content}</span>
                       ) : (
-                        <AssistantMessage content={msg.content} />
+                        <AssistantMessage content={msg.content} calendlyUrl={calendlyUrl} />
                       )}
                     </div>
                   </div>

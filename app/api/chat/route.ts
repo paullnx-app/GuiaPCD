@@ -3,6 +3,7 @@ import { generateText } from "ai";
 import { SITE_CONFIG_TEXT } from "@/src/constants/config";
 import { CHAT_RULES_BUNDLED } from "@/src/constants/chatRulesBundled";
 import { getPostsContext } from "@/src/constants/posts";
+import { getCalendlySchedulingUrl } from "@/src/lib/calendly";
 import fs from "fs";
 import path from "path";
 
@@ -20,6 +21,63 @@ export const runtime = "nodejs";
 const MAX_SITE_CONTEXT_CHARS = 55000;
 const MAX_MESSAGES_PER_SESSION = 30;
 const sessionMessageCount = new Map<string, number>();
+
+const CTA_CALENDLY_TAG = "[CTA_CALENDLY]";
+const CTA_WHATSAPP_TAG = "[CTA_WHATSAPP]";
+
+function normalizeUserText(text: string): string {
+  return text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+}
+
+/**
+ * Visitante pediu marcar na agenda, não vê o botão, ou gírias/erros comuns ("como agendo").
+ * Resposta deve trazer [CTA_CALENDLY] quando a URL de agenda estiver configurada.
+ */
+function userMessageRequestsScheduling(text: string): boolean {
+  const t = normalizeUserText(text);
+  if (/\bcalendly\b/.test(t)) return true;
+  if (/\bagendar\b|\bagendamento\b|\bagendo\b/.test(t)) return true;
+  if (/como\s+agendo|onde\s+agendo|como\s+fa[çz]o\s+para\s+agendar|como\s+eu\s+agendo/.test(t))
+    return true;
+  if (/marcar\s+(um\s+)?(horario|hora|call|time|conversa)/.test(t)) return true;
+  if (
+    /tem\s+como\s+agendar|da\s+pra\s+agendar|d[aá]\s+para\s+agendar|posso\s+agendar|quero\s+agendar|quero\s+marcar/.test(
+      t
+    )
+  )
+    return true;
+  if (/marcar\s+na\s+agenda|escolher\s+um\s+horario|ver\s+horarios?\s+disponiveis?/.test(t))
+    return true;
+  if (
+    /bot(ao)?\s*(nao|não)\s*apareceu|(nao|não)\s*vejo\s+(o\s+)?bot(ao)?|(nao|não)\s*apareceu\s+o\s+bot|sem\s+bot(ao)?|cad(e|ê)\s+o\s+bot|o\s+bot(ao)?\s*(nao|não)\s*apareceu/.test(
+      t
+    )
+  )
+    return true;
+  return false;
+}
+
+/**
+ * Garante o CTA de agenda quando o modelo ignorar a tag (telefone/e-mail no contexto do site competem).
+ * Usa getCalendlySchedulingUrl() (NEXT_PUBLIC_ ou CALENDLY_URL). Pode repetir o CTA se o visitante insistir.
+ */
+function ensureCalendlyCtaInReply(reply: string, userMessage: string): string {
+  const calUrl = getCalendlySchedulingUrl();
+  if (!calUrl) return reply;
+
+  if (!userMessageRequestsScheduling(userMessage)) return reply;
+  if (reply.includes(CTA_CALENDLY_TAG)) return reply;
+
+  let out = reply;
+  if (out.includes(CTA_WHATSAPP_TAG)) {
+    out = out.replaceAll(CTA_WHATSAPP_TAG, "").replace(/\n{3,}/g, "\n\n").trim();
+  }
+
+  const suffix =
+    "\n\nPara **escolher data e horário** na agenda da equipe, use o botão abaixo — é uma conversa inicial para alinharmos seu caso.\n\n" +
+    CTA_CALENDLY_TAG;
+  return (out + suffix).trim();
+}
 
 function loadChatRules(): string {
   const rulesPath = path.join(process.cwd(), "chat-rules.md");
@@ -58,7 +116,21 @@ ${siteContext}
 
 ## Botão de WhatsApp no chat
 
-Inclua a tag exata \`[CTA_WHATSAPP]\` **somente** quando as regras acima permitirem (pedido explícito de contato/orçamento/iniciar processo, ou uma única vez se não houver resposta no site e o visitante quiser canal direto). **Não** coloque essa tag em respostas informativas comuns. Não cole URLs de WhatsApp em toda resposta.`;
+Inclua a tag exata \`[CTA_WHATSAPP]\` **somente** quando as regras acima permitirem (pedido explícito de contato/orçamento/iniciar processo, ou uma única vez se não houver resposta no site e o visitante quiser canal direto). **Não** coloque essa tag em respostas informativas comuns. Não cole URLs de WhatsApp em toda resposta.
+
+## Agendamento (Calendly) no chat
+
+Inclua a tag exata \`[CTA_CALENDLY]\` quando as regras de direcionamento permitirem.
+
+**Obrigatório nesta resposta** se o visitante pedir agendar, marcar horário/call/conversa, “tem como agendar?”, Calendly ou equivalente — **sempre** com a tag, **não** só telefone e e-mail. Telefone/e-mail podem ser citados como alternativa **depois** do convite ao botão de agenda.
+
+Também pode usar a tag quando a conversa já evoluiu (interesse em falar com a equipe, próximo passo), mesmo sem a palavra “agendar”. **Não** aplique “evitar na primeira resposta” quando a pergunta for diretamente sobre agendamento.
+
+Pode repetir \`[CTA_CALENDLY]\` se a pessoa insistir em agendar ou disser que o botão não apareceu.
+
+**Nunca** diga que o botão já está visível “na mensagem anterior” ou peça para clicar num botão se **nesta** resposta você não incluir a tag \`[CTA_CALENDLY]\`. **Nunca** escreva crases vazias (\`\`) ou texto tipo “tag” vazia ao falar do agendamento.
+
+Na mesma mensagem, **não** use \`[CTA_CALENDLY]\` junto com \`[CTA_WHATSAPP]\`, salvo pedido explícito pelos dois canais.`;
 }
 
 type ChatRole = "user" | "assistant";
@@ -137,9 +209,10 @@ export async function POST(req: Request) {
       messages,
     });
 
-    const out =
+    const rawOut =
       text?.trim() ||
       "Não foi possível gerar uma resposta. Entre em contato pelo WhatsApp (31) 3236-1498.";
+    const out = ensureCalendlyCtaInReply(rawOut, message);
 
     if (sessionId) {
       sessionMessageCount.set(sessionId, count + 1);
