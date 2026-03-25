@@ -27,7 +27,7 @@ function CtaWhatsApp() {
       href={WHATSAPP_URL}
       target="_blank"
       rel="noopener noreferrer"
-      className="mt-3 flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90 active:scale-95"
+      className="mt-3 flex w-full min-w-0 max-w-full items-center justify-center gap-2 break-words rounded-xl px-3 py-2.5 text-center text-sm font-semibold text-white transition-opacity hover:opacity-90 active:scale-95"
       style={{
         background: "linear-gradient(135deg, #25d366 0%, #128c7e 100%)",
         boxShadow: "0 4px 16px rgba(37,211,102,0.3)",
@@ -46,7 +46,7 @@ function AssistantMessage({ content }: { content: string }) {
   const cleanContent = content.replace(CTA_TAG, "").trim();
 
   return (
-    <>
+    <div className="min-w-0 max-w-full break-words [overflow-wrap:anywhere]">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{
@@ -83,7 +83,7 @@ function AssistantMessage({ content }: { content: string }) {
         {cleanContent}
       </ReactMarkdown>
       {hasCta && <CtaWhatsApp />}
-    </>
+    </div>
   );
 }
 
@@ -294,7 +294,7 @@ export default function ChatWindow() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 16, scale: 0.99 }}
             transition={{ duration: 0.22, ease: "easeOut" }}
-            className="fixed z-[99999] overflow-hidden shadow-2xl max-md:inset-x-0 max-md:bottom-0 max-md:left-0 max-md:right-0 max-md:top-auto max-md:w-full max-md:max-w-none max-md:rounded-b-none max-md:rounded-t-2xl max-md:border-x-0 max-md:border-b-0 max-md:pb-[max(0.75rem,env(safe-area-inset-bottom))] md:bottom-20 md:right-4 md:w-[400px] md:max-w-[calc(100vw-2rem)] md:rounded-2xl sm:md:right-6"
+            className="fixed z-[99999] box-border max-md:[transform-origin:bottom_center] overflow-x-hidden overflow-y-hidden shadow-2xl max-md:top-auto max-md:bottom-0 max-md:left-[max(0.75rem,env(safe-area-inset-left,0px))] max-md:right-[max(0.75rem,env(safe-area-inset-right,0px))] max-md:w-auto max-md:max-w-none max-md:rounded-b-none max-md:rounded-t-2xl max-md:border-x-0 max-md:border-b-0 max-md:pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] md:bottom-20 md:right-4 md:w-[400px] md:max-w-[calc(100vw-2rem)] md:rounded-2xl sm:md:right-6"
             style={{
               background: "linear-gradient(180deg, #0f172a 0%, #0c1528 100%)",
               border: "1px solid rgba(56,189,248,0.15)",
@@ -308,24 +308,24 @@ export default function ChatWindow() {
                 : {}),
             }}
           >
-            <div className="flex max-h-[inherit] min-h-0 flex-col">
+            <div className="flex max-h-[inherit] min-h-0 w-full min-w-0 max-w-full flex-col">
               {/* Header */}
               <div
-                className="flex items-center justify-between px-4 py-3.5"
+                className="flex min-w-0 items-center justify-between gap-2 px-4 py-3.5"
                 style={{
                   background: "linear-gradient(90deg, rgba(16,185,129,0.12) 0%, rgba(14,165,233,0.08) 100%)",
                   borderBottom: "1px solid rgba(56,189,248,0.12)",
                 }}
               >
-                <div className="flex items-center gap-3">
-                  <div className="relative">
+                <div className="flex min-w-0 flex-1 items-center gap-3">
+                  <div className="relative shrink-0">
                     <span className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-400 text-base font-bold text-slate-950 shadow-lg shadow-emerald-500/30">
                       L
                     </span>
                     <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-slate-900 bg-emerald-400" />
                   </div>
-                  <div>
-                    <p className="text-sm font-semibold text-white leading-tight">
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold leading-tight text-white">
                       Lia — Assistente Guia PCD
                     </p>
                     <p className="text-[11px] text-emerald-400/80 font-medium">
@@ -336,7 +336,7 @@ export default function ChatWindow() {
                 <button
                   type="button"
                   onClick={() => handleClose()}
-                  className="rounded-lg p-1.5 text-sky-400/60 transition hover:bg-white/5 hover:text-white"
+                  className="shrink-0 rounded-lg p-1.5 text-sky-400/60 transition hover:bg-white/5 hover:text-white"
                   aria-label="Fechar chat"
                 >
                   <X className="h-4 w-4" />
@@ -346,18 +346,18 @@ export default function ChatWindow() {
               {/* Messages area */}
               <div
                 ref={scrollRef}
-                className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-4 py-4 max-md:min-h-[120px] md:max-h-[380px] md:min-h-[260px]"
+                className="flex min-h-0 min-w-0 max-w-full flex-1 flex-col gap-3 overflow-x-hidden overflow-y-auto px-4 py-4 max-md:min-h-[120px] md:max-h-[380px] md:min-h-[260px]"
                 style={{ scrollbarWidth: "thin", scrollbarColor: "rgba(56,189,248,0.2) transparent" }}
               >
                 {messages.length === 0 && !error && (
                   <div
-                    className="rounded-xl p-4 text-sm"
+                    className="min-w-0 max-w-full rounded-xl p-4 text-sm"
                     style={{
                       background: "linear-gradient(135deg, rgba(16,185,129,0.1) 0%, rgba(14,165,233,0.06) 100%)",
                       border: "1px solid rgba(52,211,153,0.2)",
                     }}
                   >
-                    <div className="flex items-start gap-3">
+                    <div className="flex min-w-0 items-start gap-3">
                       <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-400/20 text-xs font-bold text-emerald-400">
                         L
                       </span>
@@ -388,7 +388,7 @@ export default function ChatWindow() {
                 {messages.map((msg) => (
                   <div
                     key={msg.id}
-                    className={`flex items-end gap-2 ${
+                    className={`flex min-w-0 items-end gap-2 ${
                       msg.role === "user" ? "justify-end" : "justify-start"
                     }`}
                   >
@@ -398,7 +398,7 @@ export default function ChatWindow() {
                       </span>
                     )}
                     <div
-                      className={`max-w-[82%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed ${
+                      className={`min-w-0 max-w-[82%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed ${
                         msg.role === "user"
                           ? "rounded-br-sm text-white"
                           : "rounded-bl-sm text-sky-100/90"
@@ -425,7 +425,7 @@ export default function ChatWindow() {
                 ))}
 
                 {isLoading && (
-                  <div className="flex items-end gap-2 justify-start">
+                  <div className="flex min-w-0 items-end justify-start gap-2">
                     <span className="mb-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-400/20 text-[10px] font-bold text-emerald-400">
                       L
                     </span>
@@ -446,12 +446,12 @@ export default function ChatWindow() {
 
               {/* Input */}
               <div
-                className="px-3 py-3"
+                className="min-w-0 max-w-full px-3 py-3"
                 style={{ borderTop: "1px solid rgba(56,189,248,0.1)", background: "rgba(15,23,42,0.8)" }}
               >
                 <form
                   onSubmit={handleSubmit}
-                  className="flex items-center gap-2 rounded-xl p-1"
+                  className="flex min-w-0 max-w-full items-center gap-2 rounded-xl p-1"
                   style={{
                     background: "rgba(30,41,59,0.8)",
                     border: "1px solid rgba(56,189,248,0.15)",
@@ -461,7 +461,7 @@ export default function ChatWindow() {
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     placeholder="Digite sua dúvida..."
-                    className="flex-1 bg-transparent px-3 py-2 text-sm text-white placeholder-sky-400/40 focus:outline-none"
+                    className="min-w-0 flex-1 bg-transparent px-3 py-2 text-sm text-white placeholder-sky-400/40 focus:outline-none"
                     disabled={isLoading}
                   />
                   <button
@@ -490,7 +490,7 @@ export default function ChatWindow() {
           if (open) handleClose();
           else setOpen(true);
         }}
-        className={`fixed z-[100000] flex h-14 w-14 items-center justify-center rounded-full max-md:bottom-[max(1rem,env(safe-area-inset-bottom))] max-md:right-4 md:bottom-4 md:right-4 sm:md:right-6 ${open ? "max-md:hidden" : ""}`}
+        className={`fixed z-[100000] flex h-14 w-14 items-center justify-center rounded-full max-md:bottom-[max(1rem,env(safe-area-inset-bottom,0px))] max-md:right-[max(1rem,env(safe-area-inset-right,0px))] md:bottom-4 md:right-4 sm:md:right-6 ${open ? "max-md:hidden" : ""}`}
         style={{
           background: open
             ? "rgba(30,41,59,0.95)"
