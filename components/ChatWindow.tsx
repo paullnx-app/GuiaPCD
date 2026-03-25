@@ -106,10 +106,12 @@ export default function ChatWindow() {
   const buttonRef = useRef<HTMLButtonElement>(null);
   const summarySentRef = useRef(false);
   const ignoreOutsideUntilRef = useRef(0);
-  /** Mobile + teclado iOS: ancora o painel ao visualViewport (evita faixa escura entre input e teclado). */
+  /** Mobile + teclado iOS: ancora ao visualViewport (altura, e largura quando o teclado abre). */
   const [mobileVVLayout, setMobileVVLayout] = useState<{
     bottomPx: number;
     maxHeightPx?: number;
+    /** Teclado/zoom: largura = área visível, evita botão Enviar fora da tela. */
+    visualBox?: { left: number; width: number };
   } | null>(null);
 
   useEffect(() => {
@@ -147,7 +149,15 @@ export default function ChatWindow() {
         inset > 24
           ? Math.max(100, Math.round(viewport.height) - 20)
           : undefined;
-      setMobileVVLayout({ bottomPx: inset, maxHeightPx });
+      let visualBox: { left: number; width: number } | undefined;
+      if (inset > 24) {
+        const pad = 12;
+        const vw = Math.round(viewport.width);
+        const left = Math.round(viewport.offsetLeft) + pad;
+        const width = Math.max(220, vw - 2 * pad);
+        visualBox = { left, width };
+      }
+      setMobileVVLayout({ bottomPx: inset, maxHeightPx, visualBox });
     }
 
     syncVisualViewport();
@@ -306,6 +316,14 @@ export default function ChatWindow() {
               ...(mobileVVLayout != null
                 ? { bottom: mobileVVLayout.bottomPx }
                 : {}),
+              ...(mobileVVLayout?.visualBox
+                ? {
+                    left: mobileVVLayout.visualBox.left,
+                    right: "auto",
+                    width: mobileVVLayout.visualBox.width,
+                    maxWidth: mobileVVLayout.visualBox.width,
+                  }
+                : {}),
             }}
           >
             <div className="flex max-h-[inherit] min-h-0 w-full min-w-0 max-w-full flex-col">
@@ -451,7 +469,7 @@ export default function ChatWindow() {
               >
                 <form
                   onSubmit={handleSubmit}
-                  className="flex min-w-0 max-w-full items-center gap-2 rounded-xl p-1"
+                  className="grid min-w-0 max-w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-2 rounded-xl p-1 [touch-action:manipulation]"
                   style={{
                     background: "rgba(30,41,59,0.8)",
                     border: "1px solid rgba(56,189,248,0.15)",
@@ -461,16 +479,18 @@ export default function ChatWindow() {
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     placeholder="Digite sua dúvida..."
-                    className="min-w-0 flex-1 bg-transparent px-3 py-2 text-sm text-white placeholder-sky-400/40 focus:outline-none"
+                    className="min-w-0 w-full max-w-full bg-transparent px-2 py-2 text-base text-white placeholder-sky-400/40 focus:outline-none md:px-3 md:text-sm"
                     disabled={isLoading}
+                    enterKeyHint="send"
+                    autoComplete="off"
                   />
                   <button
                     type="submit"
                     disabled={isLoading || !input.trim()}
-                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-400 text-slate-950 transition hover:bg-emerald-300 disabled:opacity-40"
+                    className="relative z-[1] flex h-9 w-9 shrink-0 items-center justify-center self-center rounded-lg bg-emerald-400 text-slate-950 transition hover:bg-emerald-300 disabled:opacity-40 md:h-8 md:w-8"
                     aria-label="Enviar mensagem"
                   >
-                    <Send className="h-3.5 w-3.5" />
+                    <Send className="h-4 w-4 md:h-3.5 md:w-3.5" />
                   </button>
                 </form>
                 <p className="mt-2 text-center text-[10px] text-sky-400/30">
