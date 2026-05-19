@@ -9,6 +9,7 @@ import {
   validateMessage,
   formatPhoneBR,
 } from "@/lib/leadFormValidation";
+import { submitLead } from "@/lib/submitLead";
 
 const WHATSAPP_PHONE = "553132361498";
 
@@ -57,47 +58,25 @@ export default function LeadFormModal() {
 
     setStatus("loading");
 
-    const leadEmail = process.env.NEXT_PUBLIC_LEAD_EMAIL?.trim();
-    if (!leadEmail) {
+    const result = await submitLead({
+      name: name.trim(),
+      phone: phone.trim(),
+      email: email.trim(),
+      message: message.trim(),
+      _subject: "Novo lead – Guia PCD",
+      _replyto: email.trim(),
+      origem: source || "Site",
+    });
+
+    if (!result.ok) {
       setStatus("error");
-      setErrorMessage("E-mail de contato não configurado.");
+      setErrorMessage(result.message);
       return;
     }
 
-    try {
-      const res = await fetch(`https://formsubmit.co/ajax/${encodeURIComponent(leadEmail)}`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-        body: JSON.stringify({
-          name: name.trim(),
-          phone: phone.trim(),
-          email: email.trim(),
-          message: message.trim(),
-          _subject: "Novo lead – Guia PCD",
-          _replyto: email.trim(),
-          _captcha: false,
-          origem: source || "Site",
-        }),
-      });
-
-      const data = await res.json().catch(() => ({}));
-
-      if (!res.ok) {
-        setStatus("error");
-        setErrorMessage(data.message || "Não foi possível enviar. Tente de novo.");
-        return;
-      }
-
-      setStatus("success");
-      setCountdown(6);
-      redirectDone.current = false;
-    } catch {
-      setStatus("error");
-      setErrorMessage("Erro de conexão. Tente novamente.");
-    }
+    setStatus("success");
+    setCountdown(6);
+    redirectDone.current = false;
   };
 
   useEffect(() => {

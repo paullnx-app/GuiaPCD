@@ -1,4 +1,4 @@
-/** Limite para evitar rejeição do FormSubmit em transcrições muito longas. */
+/** Limite para evitar e-mails de resumo do chat excessivamente longos. */
 export const MAX_CHAT_TRANSCRIPT_CHARS = 48_000;
 
 export type ChatTranscriptMessage = { role: "user" | "assistant"; content: string };

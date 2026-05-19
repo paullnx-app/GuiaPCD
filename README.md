@@ -59,14 +59,23 @@ npm start
 - Formulário de contato funcional
 - Contador regressivo em tempo real
 
-## Recebimento de leads (FormSubmit)
+## Recebimento de leads (Resend)
 
-Os formulários de lead enviam os dados para o e-mail configurado em `NEXT_PUBLIC_LEAD_EMAIL` (ver `.env.local`), usando o [FormSubmit](https://formsubmit.co).
+Formulários e resumo do chat enviam via **`POST /api/lead`** usando [Resend](https://resend.com).
 
-**Se você não está recebendo os e-mails:**
+### Variáveis (`.env.local` e Vercel)
 
-1. **Primeira vez:** o FormSubmit envia um **e-mail de ativação** para a caixa de entrada (ex.: contato@guiapcd.com.br). É obrigatório **clicar no link** desse e-mail para ativar; até lá, os envios não chegam como lead.
-2. **Confira o spam/lixo eletrônico:** o e-mail de ativação (e os próprios leads) podem cair na pasta de spam. Marque como “não é spam” se for o caso.
-3. Depois de ativar, os próximos envios passam a chegar normalmente no endereço configurado.
+| Variável | Descrição |
+|----------|-----------|
+| `NEXT_PUBLIC_LEAD_EMAIL` | Quem recebe os leads (ex.: `contato@guiapcd.com.br`) |
+| `RESEND_API_KEY` | API Key em Resend → API Keys |
+| `RESEND_FROM` | Remetente após verificar domínio: `Guia PCD <contato@guiapcd.com.br>` |
 
-O **resumo do chat** (ao fechar o assistente, com pelo menos 5 mensagens na conversa) também usa o FormSubmit **direto do navegador**, como o formulário de lead — o FormSubmit costuma falhar se o envio partir só do servidor.
+### Configurar domínio no Resend
+
+1. Resend → **Domains** → Add `guiapcd.com.br`
+2. No **Cloudflare** (DNS only / proxy desligado nos registros que o Resend pedir), adicione os registros SPF/DKIM/MX que o Resend mostrar
+3. Aguarde status **Verified**
+4. Coloque `RESEND_FROM=Guia PCD <contato@guiapcd.com.br>` na Vercel e faça redeploy
+
+**Teste sem domínio:** com só `RESEND_API_KEY`, o remetente padrão é `onboarding@resend.dev` (só para testes; em produção use o domínio verificado).

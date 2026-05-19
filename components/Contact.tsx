@@ -9,6 +9,7 @@ import {
   validateMessage,
   formatPhoneBR,
 } from "@/lib/leadFormValidation";
+import { submitLead } from "@/lib/submitLead";
 
 export default function Contact() {
   const [formData, setFormData] = useState({
@@ -47,43 +48,24 @@ export default function Contact() {
 
     setStatus("loading");
 
-    const leadEmail = process.env.NEXT_PUBLIC_LEAD_EMAIL?.trim();
-    if (!leadEmail) {
+    const result = await submitLead({
+      name: formData.name.trim(),
+      email: formData.email.trim(),
+      phone: formData.phone.trim(),
+      message: formData.message.trim(),
+      _subject: "Novo lead – Guia PCD (Contato)",
+      _replyto: formData.email.trim(),
+      origem: "Formulário da página Contato",
+    });
+
+    if (!result.ok) {
       setStatus("error");
-      setErrorMessage("E-mail de contato não configurado.");
+      setErrorMessage(result.message);
       return;
     }
 
-    try {
-      const res = await fetch(`https://formsubmit.co/ajax/${encodeURIComponent(leadEmail)}`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-        body: JSON.stringify({
-          name: formData.name.trim(),
-          email: formData.email.trim(),
-          phone: formData.phone.trim(),
-          message: formData.message.trim(),
-          _subject: "Novo lead – Guia PCD (Contato)",
-          _replyto: formData.email.trim(),
-          _captcha: false,
-          origem: "Formulário da página Contato",
-        }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        setStatus("error");
-        setErrorMessage(data.message || "Não foi possível enviar. Tente de novo.");
-        return;
-      }
-      setStatus("success");
-      setFormData({ name: "", email: "", phone: "", message: "" });
-    } catch {
-      setStatus("error");
-      setErrorMessage("Erro de conexão. Tente novamente.");
-    }
+    setStatus("success");
+    setFormData({ name: "", email: "", phone: "", message: "" });
   };
 
   return (

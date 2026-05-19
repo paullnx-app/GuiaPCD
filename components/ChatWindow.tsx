@@ -278,53 +278,26 @@ export default function ChatWindow() {
     if (summarySentRef.current) return;
     if (msgs.length < MIN_MESSAGES_TO_REPORT) return;
 
-    const leadEmail = process.env.NEXT_PUBLIC_LEAD_EMAIL?.trim();
-    if (!leadEmail) return;
-
     const payloadMessages = msgs.map((m) => ({ role: m.role, content: m.content }));
     const userMessages = payloadMessages.filter((m) => m.role === "user");
     const transcript = truncateTranscript(formatChatTranscript(payloadMessages));
     const now = new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" });
 
-    try {
-      const res = await fetch(
-        `https://formsubmit.co/ajax/${encodeURIComponent(leadEmail)}`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Accept: "application/json",
-          },
-          body: JSON.stringify({
-            _subject: `Chat Guia PCD - ${userMessages.length} perguntas (${now})`,
-            _captcha: false,
-            session: sid || "desconhecido",
-            data: now,
-            total_mensagens: String(msgs.length),
-            perguntas_visitante: String(userMessages.length),
-            transcricao: transcript,
-          }),
-        }
-      );
+    const { submitLead } = await import("@/lib/submitLead");
+    const result = await submitLead({
+      _subject: `Chat Guia PCD - ${userMessages.length} perguntas (${now})`,
+      origem: "Resumo do chat",
+      session: sid || "desconhecido",
+      data: now,
+      total_mensagens: String(msgs.length),
+      perguntas_visitante: String(userMessages.length),
+      transcricao: transcript,
+    });
 
-      const data: { success?: string | boolean; message?: string } = await res
-        .json()
-        .catch(() => ({}));
-
-      const ok =
-        res.ok &&
-        data.success !== "false" &&
-        data.success !== false &&
-        String(data.success).toLowerCase() !== "false";
-
-      if (!ok) {
-        console.warn("[chat-summary] FormSubmit:", res.status, data);
-        return;
-      }
-
+    if (result.ok) {
       summarySentRef.current = true;
-    } catch (e) {
-      console.warn("[chat-summary]", e);
+    } else {
+      console.warn("[chat-summary]", result.errorCode, result.message);
     }
   }
 
