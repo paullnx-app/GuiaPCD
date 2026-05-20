@@ -6,15 +6,21 @@ import { MessageCircle, X, Send, Calendar } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import {
-  formatChatTranscript,
-  truncateTranscript,
-} from "@/src/lib/chatTranscript";
+  buildChatSummaryPayload,
+  shouldReportChat,
+} from "@/lib/chatSummary";
+import {
+  loadChatVisitor,
+  saveChatVisitor,
+  type ChatVisitor,
+} from "@/lib/chatVisitor";
+import { getLeadFirstName } from "@/lib/sendLeadEmail";
+import { validateEmail, validateName } from "@/lib/leadFormValidation";
 
 const SESSION_ID_KEY = "guiapcd_chat_session_id";
 const WHATSAPP_URL = "https://api.whatsapp.com/send?phone=553132361498&text=Ol%C3%A1%2C%20vim%20pelo%20site%20e%20gostaria%20de%20mais%20informa%C3%A7%C3%B5es%20sobre%20isen%C3%A7%C3%A3o%20veicular%20PcD.";
 const CTA_TAG = "[CTA_WHATSAPP]";
 const CTA_CALENDLY_TAG = "[CTA_CALENDLY]";
-const MIN_MESSAGES_TO_REPORT = 5;
 
 function getOrCreateSessionId(): string {
   if (typeof window === "undefined") return "";
@@ -125,6 +131,78 @@ function genId() {
   return `msg-${++_id}-${Date.now()}`;
 }
 
+function ChatVisitorGate({ onContinue }: { onContinue: (visitor: ChatVisitor) => void }) {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [error, setError] = useState<string | null>(null);
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const nameErr = validateName(name);
+    const emailErr = validateEmail(email);
+    if (nameErr || emailErr) {
+      setError(nameErr || emailErr);
+      return;
+    }
+    setError(null);
+    const visitor = { name: name.trim(), email: email.trim() };
+    saveChatVisitor(visitor);
+    onContinue(visitor);
+  }
+
+  return (
+    <div
+      className="min-w-0 max-w-full rounded-xl p-4 text-sm"
+      style={{
+        background: "linear-gradient(135deg, rgba(16,185,129,0.1) 0%, rgba(14,165,233,0.06) 100%)",
+        border: "1px solid rgba(52,211,153,0.2)",
+      }}
+    >
+      <p className="font-semibold text-white">Antes de começar</p>
+      <p className="mt-1.5 text-sky-100/80 leading-relaxed">
+        Informe como podemos te chamar. Enviamos um resumo desta conversa para nossa equipe
+        quando você fechar o chat.
+      </p>
+      <form onSubmit={handleSubmit} className="mt-4 space-y-3">
+        <div>
+          <label htmlFor="chat-visitor-name" className="mb-1 block text-xs text-sky-300/80">
+            Nome
+          </label>
+          <input
+            id="chat-visitor-name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="w-full rounded-lg border border-sky-400/20 bg-slate-900/80 px-3 py-2 text-sm text-white placeholder-sky-400/40 focus:border-emerald-400/50 focus:outline-none"
+            placeholder="Seu nome"
+            autoComplete="name"
+          />
+        </div>
+        <div>
+          <label htmlFor="chat-visitor-email" className="mb-1 block text-xs text-sky-300/80">
+            E-mail
+          </label>
+          <input
+            id="chat-visitor-email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="w-full rounded-lg border border-sky-400/20 bg-slate-900/80 px-3 py-2 text-sm text-white placeholder-sky-400/40 focus:border-emerald-400/50 focus:outline-none"
+            placeholder="seu@email.com"
+            autoComplete="email"
+          />
+        </div>
+        {error ? <p className="text-xs text-red-300">{error}</p> : null}
+        <button
+          type="submit"
+          className="w-full rounded-lg bg-emerald-400 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-emerald-300"
+        >
+          Continuar com a Lia
+        </button>
+      </form>
+    </div>
+  );
+}
+
 export default function ChatWindow() {
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
@@ -132,6 +210,7 @@ export default function ChatWindow() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sessionId, setSessionId] = useState("");
+  const [visitor, setVisitor] = useState<ChatVisitor | null>(null);
   /** URL do Calendly: lida em runtime via API para bater com o servidor (evita bundle sem NEXT_PUBLIC). */
   const [calendlyUrl, setCalendlyUrl] = useState(
     () => process.env.NEXT_PUBLIC_CALENDLY_URL?.trim() ?? ""
@@ -140,6 +219,9 @@ export default function ChatWindow() {
   const panelRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const summarySentRef = useRef(false);
+  const messagesRef = useRef<Message[]>([]);
+  const visitorRef = useRef<ChatVisitor | null>(null);
+  const sessionIdRef = useRef("");
   const ignoreOutsideUntilRef = useRef(0);
   /** Mobile + teclado iOS: ancora ao visualViewport (altura, e largura quando o teclado abre). */
   const [mobileVVLayout, setMobileVVLayout] = useState<{
@@ -151,6 +233,42 @@ export default function ChatWindow() {
 
   useEffect(() => {
     setSessionId(getOrCreateSessionId());
+    const saved = loadChatVisitor();
+    if (saved) setVisitor(saved);
+  }, []);
+
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
+
+  useEffect(() => {
+    visitorRef.current = visitor;
+  }, [visitor]);
+
+  useEffect(() => {
+    sessionIdRef.current = sessionId;
+  }, [sessionId]);
+
+  useEffect(() => {
+    function onPageLeave() {
+      if (summarySentRef.current) return;
+      const msgs = messagesRef.current;
+      if (!shouldReportChat(msgs.length)) return;
+      const payload = buildChatSummaryPayload(
+        msgs.map((m) => ({ role: m.role, content: m.content })),
+        sessionIdRef.current,
+        visitorRef.current
+      );
+      if (typeof navigator !== "undefined" && navigator.sendBeacon) {
+        const ok = navigator.sendBeacon(
+          "/api/lead",
+          new Blob([JSON.stringify(payload)], { type: "application/json" })
+        );
+        if (ok) summarySentRef.current = true;
+      }
+    }
+    window.addEventListener("pagehide", onPageLeave);
+    return () => window.removeEventListener("pagehide", onPageLeave);
   }, []);
 
   useEffect(() => {
@@ -274,26 +392,20 @@ export default function ChatWindow() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
-  async function sendSummary(msgs: Message[], sid: string) {
+  async function trySendSummary() {
     if (summarySentRef.current) return;
-    if (msgs.length < MIN_MESSAGES_TO_REPORT) return;
 
-    const payloadMessages = msgs.map((m) => ({ role: m.role, content: m.content }));
-    const userMessages = payloadMessages.filter((m) => m.role === "user");
-    const transcript = truncateTranscript(formatChatTranscript(payloadMessages));
-    const now = new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" });
+    const msgs = messagesRef.current;
+    if (!shouldReportChat(msgs.length)) return;
+
+    const payload = buildChatSummaryPayload(
+      msgs.map((m) => ({ role: m.role, content: m.content })),
+      sessionIdRef.current,
+      visitorRef.current
+    );
 
     const { submitLead } = await import("@/lib/submitLead");
-    const result = await submitLead({
-      _subject: `Chat Guia PCD - ${userMessages.length} perguntas (${now})`,
-      origem: "Resumo do chat",
-      session: sid || "desconhecido",
-      data: now,
-      total_mensagens: String(msgs.length),
-      perguntas_visitante: String(userMessages.length),
-      transcricao: transcript,
-    });
-
+    const result = await submitLead(payload);
     if (result.ok) {
       summarySentRef.current = true;
     } else {
@@ -302,14 +414,14 @@ export default function ChatWindow() {
   }
 
   function handleClose() {
-    sendSummary(messages, sessionId);
+    void trySendSummary();
     setOpen(false);
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const text = input.trim();
-    if (!text || isLoading) return;
+    if (!text || isLoading || !visitor) return;
 
     setInput("");
     setError(null);
@@ -411,17 +523,6 @@ export default function ChatWindow() {
                   </div>
                 </div>
                 <div className="flex shrink-0 items-center gap-1">
-                  {calendlyUrl ? (
-                    <a
-                      href={calendlyUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="max-w-[5.5rem] truncate rounded-lg px-1.5 py-1.5 text-center text-[10px] font-medium text-sky-300/90 underline-offset-2 hover:text-sky-200 hover:underline sm:max-w-[7.5rem] sm:px-2 sm:text-[11px]"
-                    >
-                      <span className="sm:hidden">Agendar</span>
-                      <span className="hidden sm:inline">Agendar conversa</span>
-                    </a>
-                  ) : null}
                   <button
                     type="button"
                     onClick={() => handleClose()}
@@ -439,7 +540,9 @@ export default function ChatWindow() {
                 className="flex min-h-0 min-w-0 max-w-full flex-1 flex-col gap-3 overflow-x-hidden overflow-y-auto px-4 py-4 max-md:min-h-[120px] md:max-h-[380px] md:min-h-[260px]"
                 style={{ scrollbarWidth: "thin", scrollbarColor: "rgba(56,189,248,0.2) transparent" }}
               >
-                {messages.length === 0 && !error && (
+                {!visitor ? <ChatVisitorGate onContinue={setVisitor} /> : null}
+
+                {visitor && messages.length === 0 && !error && (
                   <div
                     className="min-w-0 max-w-full rounded-xl p-4 text-sm"
                     style={{
@@ -452,9 +555,13 @@ export default function ChatWindow() {
                         L
                       </span>
                       <div className="space-y-1.5">
-                        <p className="font-semibold text-white">Olá! Sou a Lia 👋</p>
+                        <p className="font-semibold text-white">
+                          Olá, {getLeadFirstName(visitor.name)}! Sou a Lia 👋
+                        </p>
                         <p className="text-sky-100/80 leading-relaxed">
-                          Estou aqui para tirar suas dúvidas sobre <strong className="text-white">isenção veicular para PcD</strong> — documentação, laudos, impostos e nossos serviços.
+                          Estou aqui para tirar suas dúvidas sobre{" "}
+                          <strong className="text-white">isenção veicular para PcD</strong> — documentação,
+                          laudos, impostos e nossos serviços.
                         </p>
                         <p className="text-sky-300/60 text-xs pt-1">Como posso te ajudar hoje?</p>
                       </div>
@@ -475,7 +582,8 @@ export default function ChatWindow() {
                   </div>
                 )}
 
-                {messages.map((msg) => (
+                {visitor
+                  ? messages.map((msg) => (
                   <div
                     key={msg.id}
                     className={`flex min-w-0 items-end gap-2 ${
@@ -512,9 +620,10 @@ export default function ChatWindow() {
                       )}
                     </div>
                   </div>
-                ))}
+                    ))
+                  : null}
 
-                {isLoading && (
+                {visitor && isLoading && (
                   <div className="flex min-w-0 items-end justify-start gap-2">
                     <span className="mb-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-400/20 text-[10px] font-bold text-emerald-400">
                       L
@@ -550,15 +659,17 @@ export default function ChatWindow() {
                   <input
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
-                    placeholder="Digite sua dúvida..."
+                    placeholder={
+                      visitor ? "Digite sua dúvida..." : "Preencha nome e e-mail acima para começar"
+                    }
                     className="min-w-0 w-full max-w-full bg-transparent px-2 py-2 text-base text-white placeholder-sky-400/40 focus:outline-none md:px-3 md:text-sm"
-                    disabled={isLoading}
+                    disabled={isLoading || !visitor}
                     enterKeyHint="send"
                     autoComplete="off"
                   />
                   <button
                     type="submit"
-                    disabled={isLoading || !input.trim()}
+                    disabled={isLoading || !visitor || !input.trim()}
                     className="relative z-[1] flex h-9 w-9 shrink-0 items-center justify-center self-center rounded-lg bg-emerald-400 text-slate-950 transition hover:bg-emerald-300 disabled:opacity-40 md:h-8 md:w-8"
                     aria-label="Enviar mensagem"
                   >

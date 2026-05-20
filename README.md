@@ -69,13 +69,19 @@ Formulários e resumo do chat enviam via **`POST /api/lead`** usando [Resend](ht
 |----------|-----------|
 | `NEXT_PUBLIC_LEAD_EMAIL` | Quem recebe os leads (ex.: `contato@guiapcd.com.br`) |
 | `RESEND_API_KEY` | API Key em Resend → API Keys |
-| `RESEND_FROM` | Remetente após verificar domínio: `Guia PCD <contato@guiapcd.com.br>` |
+| `RESEND_FROM` | Remetente após verificar domínio: `Site Guia PcD <contato@guiapcd.com.br>` |
 
 ### Configurar domínio no Resend
 
 1. Resend → **Domains** → Add `guiapcd.com.br`
 2. No **Cloudflare** (DNS only / proxy desligado nos registros que o Resend pedir), adicione os registros SPF/DKIM/MX que o Resend mostrar
 3. Aguarde status **Verified**
-4. Coloque `RESEND_FROM=Guia PCD <contato@guiapcd.com.br>` na Vercel e faça redeploy
+4. Coloque `RESEND_FROM=Site Guia PcD <contato@guiapcd.com.br>` na Vercel e faça redeploy
 
 **Teste sem domínio:** com só `RESEND_API_KEY`, o remetente padrão é `onboarding@resend.dev` (só para testes; em produção use o domínio verificado).
+
+## Chat (Lia)
+
+- Antes de conversar, o visitante informa **nome e e-mail** (guardados na sessão do navegador).
+- Botões **Agendar** e **WhatsApp** aparecem **só nas respostas da Lia**, quando ela incluir `[CTA_CALENDLY]` ou `[CTA_WHATSAPP]` — não há botão fixo no cabeçalho do chat.
+- Ao fechar o chat ou sair da página (com **5+ mensagens** na conversa), um **resumo por e-mail** é enviado para `NEXT_PUBLIC_LEAD_EMAIL` com nome, e-mail, transcrição e ID da sessão.
