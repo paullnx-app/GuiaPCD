@@ -9,8 +9,8 @@ export default function Footer() {
           {/* Contato */}
           <div>
             <h3 className="text-lg font-bold mb-4">Contato</h3>
-            <p className="text-gray-400 mb-2">Av. Contorno, 2905 – Sl. 405 – Santa Efigênia, Belo Horizonte / MG</p>
-            <a href="mailto:[email protected]" className="text-gray-400 hover:text-white transition mb-2 block">[email protected]</a>
+            <p className="text-gray-400 mb-2">Av. Contorno, 2905, Sl. 405, Santa Efigênia, Belo Horizonte / MG</p>
+            <a href="mailto:contato@guiapcd.com.br" className="text-gray-400 hover:text-white transition mb-2 block">contato@guiapcd.com.br</a>
             <a href="tel:3132361498" className="text-gray-400 hover:text-white transition block">(31) 3236-1498</a>
           </div>
 

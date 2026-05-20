@@ -6,7 +6,8 @@ import {
 import type { ChatVisitor } from "@/lib/chatVisitor";
 import type { LeadPayload } from "@/lib/submitLead";
 
-export const MIN_CHAT_MESSAGES_TO_REPORT = 5;
+/** Mínimo de mensagens do visitante para enviar resumo (após nome/e-mail validados). */
+export const MIN_USER_MESSAGES_TO_REPORT = 1;
 
 export function buildChatSummaryPayload(
   messages: ChatTranscriptMessage[],
@@ -31,6 +32,11 @@ export function buildChatSummaryPayload(
   };
 }
 
-export function shouldReportChat(messagesCount: number): boolean {
-  return messagesCount >= MIN_CHAT_MESSAGES_TO_REPORT;
+export function shouldReportChat(
+  messages: ChatTranscriptMessage[],
+  visitor: ChatVisitor | null
+): boolean {
+  if (!visitor?.name?.trim() || !visitor?.email?.trim()) return false;
+  const userCount = messages.filter((m) => m.role === "user").length;
+  return userCount >= MIN_USER_MESSAGES_TO_REPORT;
 }

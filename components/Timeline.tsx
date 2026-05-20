@@ -10,7 +10,7 @@ export default function Timeline() {
       year: "2017",
       title: "Nos adaptando para servir melhor",
       description:
-        "As regras da Receita e do Estado mudaram — e a gente se atualizou. Ajustamos nossos processos para que você continuasse sendo atendido com clareza e sem atrasos, mesmo com as mudanças.",
+        "As regras da Receita e do Estado mudaram, e a gente se atualizou. Ajustamos nossos processos para que você continuasse sendo atendido com clareza e sem atrasos, mesmo com as mudanças.",
     },
     {
       year: "2019",
@@ -37,7 +37,7 @@ export default function Timeline() {
             Nossa jornada para alcançar a excelência em isenção veicular
           </h2>
           <p className="mx-auto mt-3 max-w-2xl text-sm text-sky-100/85 md:text-base">
-            Alguns marcos da nossa trajetória — e das pessoas que confiaram na gente ao longo do caminho.
+            Alguns marcos da nossa trajetória e das pessoas que confiaram na gente ao longo do caminho.
           </p>
         </div>
 
@@ -81,7 +81,7 @@ export default function Timeline() {
             Preferimos conversar?
           </p>
           <p className="mt-1 text-base text-sky-50/95">
-            Liga ou manda mensagem — a gente responde. Dúvidas sobre isenção ou sobre nós, estamos aqui.
+            Liga ou manda mensagem: a gente responde. Dúvidas sobre isenção ou sobre nós, estamos aqui.
           </p>
           <a
             href="tel:3132361498"

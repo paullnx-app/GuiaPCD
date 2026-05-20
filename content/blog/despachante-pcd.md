@@ -7,7 +7,7 @@ category: Documentação
 excerpt: "Entenda como um despachante PCD orienta cada etapa do processo de isenção veicular, evita erros na documentação e acelera a aprovação dos benefícios fiscais."
 keyTakeaways:
   - "O despachante PCD é o profissional que conduz todo o processo de isenção veicular em nome do beneficiário."
-  - "Ele identifica quais impostos podem ser isentos — IPI, ICMS, IPVA e IOF — de acordo com cada caso."
+  - "Ele identifica quais impostos podem ser isentos (IPI, ICMS, IPVA e IOF) de acordo com cada caso."
   - "A análise inicial do despachante verifica se a condição de saúde se enquadra nos critérios legais."
   - "Laudos médicos, formulários e requerimentos são organizados e revisados antes do envio aos órgãos competentes."
   - "Erros comuns, como documentos vencidos ou formulários incompletos, são a principal causa de indeferimento."
@@ -65,7 +65,7 @@ Os documentos geralmente exigidos incluem:
 
 ### 3. Preenchimento e envio dos requerimentos
 
-O despachante preenche cada formulário conforme as exigências do órgão destinatário. Erros simples — como campos em branco, datas incorretas ou CID desatualizado — estão entre as **principais causas de indeferimento**. Por esse motivo, a revisão profissional do despachante PCD reduz significativamente o risco de rejeição.
+O despachante preenche cada formulário conforme as exigências do órgão destinatário. Erros simples, como campos em branco, datas incorretas ou CID desatualizado, estão entre as **principais causas de indeferimento**. Por esse motivo, a revisão profissional do despachante PCD reduz significativamente o risco de rejeição.
 
 ### 4. Acompanhamento até a aprovação
 

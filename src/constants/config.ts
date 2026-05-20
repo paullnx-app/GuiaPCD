@@ -9,7 +9,7 @@ export const SITE_CONFIG_TEXT = `
 O Guia PCD é uma equipe de Belo Horizonte especializada em isenção veicular para Pessoas com Deficiência (PcD). Atua desde 2013 ajudando pessoas com deficiência a conquistar isenção de impostos na compra de veículos.
 
 ### Dados da empresa
-- Endereço: Av. Contorno, 2905 – Sl. 405 – Santa Efigênia, Belo Horizonte / MG – 30110-915
+- Endereço: Av. Contorno, 2905, Sl. 405, Santa Efigênia, Belo Horizonte / MG, 30110-915
 - E-mail: contato@guiapcd.com.br
 - Telefone / WhatsApp: (31) 3236-1498
 - Mais de 1.000 casos de sucesso

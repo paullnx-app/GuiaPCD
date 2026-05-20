@@ -1,6 +1,8 @@
 /**
- * URL pública de agendamento (Calendly). NEXT_PUBLIC_* no cliente; CALENDLY_URL opcional no servidor
- * quando o deploy define só variável de runtime (evita bundle desatualizado sem o botão).
+ * STANDBY — Agendamento via Calendly desativado no produto (chat usa só WhatsApp).
+ * Código mantido para reativar no futuro: botão [CTA_CALENDLY] no ChatWindow + fetch /api/calendly-url.
+ *
+ * URL pública de agendamento. NEXT_PUBLIC_* no cliente; CALENDLY_URL opcional no servidor.
  */
 export function getCalendlySchedulingUrl(): string {
   return (

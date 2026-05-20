@@ -53,7 +53,7 @@ export default function Contact() {
       email: formData.email.trim(),
       phone: formData.phone.trim(),
       message: formData.message.trim(),
-      _subject: "Novo lead – Guia PCD (Contato)",
+      _subject: "Novo lead, Guia PCD (Contato)",
       _replyto: formData.email.trim(),
       origem: "Formulário da página Contato",
     });
@@ -94,14 +94,14 @@ export default function Contact() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
                 <p className="text-sm text-sky-100/90">
-                  Av. Contorno, 2905 – Sl. 405 – Santa Efigênia, Belo Horizonte / MG – 30110-915
+                  Av. Contorno, 2905, Sl. 405, Santa Efigênia, Belo Horizonte / MG, 30110-915
                 </p>
               </div>
               <div className="flex items-center gap-4 rounded-2xl border border-sky-700/60 bg-slate-900/70 p-4">
                 <svg className="h-5 w-5 shrink-0 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                 </svg>
-                <a href="mailto:[email protected]" className="text-sm text-sky-100/90 hover:text-emerald-400 transition">[email protected]</a>
+                <a href="mailto:contato@guiapcd.com.br" className="text-sm text-sky-100/90 hover:text-emerald-400 transition">contato@guiapcd.com.br</a>
               </div>
               <div className="flex items-center gap-4 rounded-2xl border border-sky-700/60 bg-slate-900/70 p-4">
                 <svg className="h-5 w-5 shrink-0 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">

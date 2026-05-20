@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { MessageCircle, X, Send, Calendar } from "lucide-react";
+import { MessageCircle, X, Send } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import {
@@ -20,7 +20,7 @@ import { validateEmail, validateName } from "@/lib/leadFormValidation";
 const SESSION_ID_KEY = "guiapcd_chat_session_id";
 const WHATSAPP_URL = "https://api.whatsapp.com/send?phone=553132361498&text=Ol%C3%A1%2C%20vim%20pelo%20site%20e%20gostaria%20de%20mais%20informa%C3%A7%C3%B5es%20sobre%20isen%C3%A7%C3%A3o%20veicular%20PcD.";
 const CTA_TAG = "[CTA_WHATSAPP]";
-const CTA_CALENDLY_TAG = "[CTA_CALENDLY]";
+const CTA_CALENDLY_TAG = "[CTA_CALENDLY]"; // legado: exibe botão WhatsApp
 
 function getOrCreateSessionId(): string {
   if (typeof window === "undefined") return "";
@@ -30,21 +30,6 @@ function getOrCreateSessionId(): string {
     sessionStorage.setItem(SESSION_ID_KEY, id);
   }
   return id;
-}
-
-function CtaCalendly({ href }: { href: string }) {
-  if (!href) return null;
-  return (
-    <a
-      href={href}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="mt-3 flex w-full min-w-0 max-w-full items-center justify-center gap-2 break-words rounded-xl border border-sky-400/40 bg-sky-500/10 px-3 py-2.5 text-center text-sm font-semibold text-sky-100 transition-opacity hover:border-sky-300/60 hover:bg-sky-500/15 active:scale-95"
-    >
-      <Calendar className="h-4 w-4 shrink-0 text-sky-300" aria-hidden />
-      Agendar uma conversa
-    </a>
-  );
 }
 
 function CtaWhatsApp() {
@@ -67,15 +52,9 @@ function CtaWhatsApp() {
   );
 }
 
-function AssistantMessage({
-  content,
-  calendlyUrl,
-}: {
-  content: string;
-  calendlyUrl: string;
-}) {
-  const hasCalendlyCta = content.includes(CTA_CALENDLY_TAG);
-  const hasWhatsAppCta = content.includes(CTA_TAG);
+function AssistantMessage({ content }: { content: string }) {
+  const hasWhatsAppCta =
+    content.includes(CTA_TAG) || content.includes(CTA_CALENDLY_TAG);
   const cleanContent = content
     .replaceAll(CTA_CALENDLY_TAG, "")
     .replaceAll(CTA_TAG, "")
@@ -118,7 +97,6 @@ function AssistantMessage({
       >
         {cleanContent}
       </ReactMarkdown>
-      {hasCalendlyCta && calendlyUrl ? <CtaCalendly href={calendlyUrl} /> : null}
       {hasWhatsAppCta && <CtaWhatsApp />}
     </div>
   );
@@ -158,10 +136,11 @@ function ChatVisitorGate({ onContinue }: { onContinue: (visitor: ChatVisitor) =>
         border: "1px solid rgba(52,211,153,0.2)",
       }}
     >
-      <p className="font-semibold text-white">Antes de começar</p>
+      <p className="font-semibold text-white">Olá! Sou a Lia 👋</p>
       <p className="mt-1.5 text-sky-100/80 leading-relaxed">
-        Informe como podemos te chamar. Enviamos um resumo desta conversa para nossa equipe
-        quando você fechar o chat.
+        Bem-vindo(a) ao Guia PCD. Estou aqui para tirar suas dúvidas sobre{" "}
+        <strong className="text-white">isenção veicular para PcD</strong>: documentação, laudos,
+        impostos e nossos serviços. Como posso te chamar?
       </p>
       <form onSubmit={handleSubmit} className="mt-4 space-y-3">
         <div>
@@ -211,10 +190,6 @@ export default function ChatWindow() {
   const [error, setError] = useState<string | null>(null);
   const [sessionId, setSessionId] = useState("");
   const [visitor, setVisitor] = useState<ChatVisitor | null>(null);
-  /** URL do Calendly: lida em runtime via API para bater com o servidor (evita bundle sem NEXT_PUBLIC). */
-  const [calendlyUrl, setCalendlyUrl] = useState(
-    () => process.env.NEXT_PUBLIC_CALENDLY_URL?.trim() ?? ""
-  );
   const scrollRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -253,7 +228,7 @@ export default function ChatWindow() {
     function onPageLeave() {
       if (summarySentRef.current) return;
       const msgs = messagesRef.current;
-      if (!shouldReportChat(msgs.length)) return;
+      if (!shouldReportChat(msgs, visitorRef.current)) return;
       const payload = buildChatSummaryPayload(
         msgs.map((m) => ({ role: m.role, content: m.content })),
         sessionIdRef.current,
@@ -269,21 +244,6 @@ export default function ChatWindow() {
     }
     window.addEventListener("pagehide", onPageLeave);
     return () => window.removeEventListener("pagehide", onPageLeave);
-  }, []);
-
-  useEffect(() => {
-    let cancelled = false;
-    fetch("/api/calendly-url")
-      .then((res) => res.json())
-      .then((data: { url: string | null }) => {
-        if (cancelled || typeof data?.url !== "string") return;
-        const u = data.url.trim();
-        if (u) setCalendlyUrl(u);
-      })
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
   }, []);
 
   useEffect(() => {
@@ -355,7 +315,7 @@ export default function ChatWindow() {
     }
   }, [open]);
 
-  // Desktop: fecha ao rolar a página. Mobile: NÃO — teclado virtual e barra do browser alteram scrollY e fechavam o chat.
+  // Desktop: fecha ao rolar a página. Mobile: NÃO (teclado virtual e barra do browser alteram scrollY e fechavam o chat).
   // Fora do painel: pointerdown (melhor que só mousedown no touch) + período de graça após abrir.
   useEffect(() => {
     if (!open) return;
@@ -396,7 +356,7 @@ export default function ChatWindow() {
     if (summarySentRef.current) return;
 
     const msgs = messagesRef.current;
-    if (!shouldReportChat(msgs.length)) return;
+    if (!shouldReportChat(msgs, visitorRef.current)) return;
 
     const payload = buildChatSummaryPayload(
       msgs.map((m) => ({ role: m.role, content: m.content })),
@@ -515,7 +475,7 @@ export default function ChatWindow() {
                   </div>
                   <div className="min-w-0">
                     <p className="text-sm font-semibold leading-tight text-white">
-                      Lia — Assistente Guia PCD
+                      Lia, Assistente Guia PCD
                     </p>
                     <p className="text-[11px] text-emerald-400/80 font-medium">
                       ● Online agora
@@ -560,7 +520,7 @@ export default function ChatWindow() {
                         </p>
                         <p className="text-sky-100/80 leading-relaxed">
                           Estou aqui para tirar suas dúvidas sobre{" "}
-                          <strong className="text-white">isenção veicular para PcD</strong> — documentação,
+                          <strong className="text-white">isenção veicular para PcD</strong>: documentação,
                           laudos, impostos e nossos serviços.
                         </p>
                         <p className="text-sky-300/60 text-xs pt-1">Como posso te ajudar hoje?</p>
@@ -616,7 +576,7 @@ export default function ChatWindow() {
                       {msg.role === "user" ? (
                         <span className="whitespace-pre-wrap">{msg.content}</span>
                       ) : (
-                        <AssistantMessage content={msg.content} calendlyUrl={calendlyUrl} />
+                        <AssistantMessage content={msg.content} />
                       )}
                     </div>
                   </div>

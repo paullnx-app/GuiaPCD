@@ -7,6 +7,21 @@ function asString(value: unknown): string {
   return String(value).trim();
 }
 
+/** Primeiro nome do lead (primeira palavra do campo nome). */
+export function getLeadFirstName(name: string): string {
+  const trimmed = name.trim();
+  if (!trimmed) return "";
+  return trimmed.split(/\s+/)[0];
+}
+
+/** Assunto: `PrimeiroNome - ` + assunto base (quando há nome). */
+export function buildLeadSubject(baseSubject: string, name?: string): string {
+  const base = baseSubject.trim() || "Novo lead, Guia PCD";
+  const first = getLeadFirstName(name ?? "");
+  if (!first) return base;
+  return `${first} - ${base}`;
+}
+
 function buildPlainText(body: LeadBody): string {
   const lines: string[] = [];
   const push = (label: string, key: string) => {
@@ -49,11 +64,14 @@ export async function sendLeadEmail(
     };
   }
 
-  const subject = asString(body._subject) || "Novo lead – Guia PCD";
+  const subject = buildLeadSubject(
+    asString(body._subject) || "Novo lead, Guia PCD",
+    asString(body.name)
+  );
   const replyTo = asString(body._replyto) || asString(body.email) || undefined;
   const plain = buildPlainText(body);
   const from =
-    process.env.RESEND_FROM?.trim() || "Guia PCD <onboarding@resend.dev>";
+    process.env.RESEND_FROM?.trim() || "Site Guia PcD <onboarding@resend.dev>";
 
   const resend = new Resend(apiKey);
   const { error } = await resend.emails.send({

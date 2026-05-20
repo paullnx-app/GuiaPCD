@@ -31,7 +31,7 @@ export default function SobreNosPage() {
               <p className="mt-4 max-w-xl text-sm text-sky-100/85 md:text-base">
                 Somos uma equipe de BH que acredita que mobilidade é direito, não favor. Desde 2013,
                 ajudamos pessoas com deficiência a conquistar a isenção veicular sem passar sozinhas
-                por laudos, prazos e repartições. Aqui você é atendido por nome — não por número de processo.
+                por laudos, prazos e repartições. Aqui você é atendido por nome, não por número de processo.
               </p>
               <div className="mt-6 flex flex-wrap gap-3">
                 <Link
@@ -87,7 +87,7 @@ export default function SobreNosPage() {
               },
               {
                 title: "Ir até o fim com você",
-                text: "Não largamos no meio do caminho. Acompanhamos da primeira conversa até a autorização na mão — e além, se precisar.",
+                text: "Não largamos no meio do caminho. Acompanhamos da primeira conversa até a autorização na mão e além, se precisar.",
               },
               {
                 title: "Respeitar seu tempo",
@@ -111,14 +111,14 @@ export default function SobreNosPage() {
         <div className="mx-auto max-w-3xl px-4">
           <div className="rounded-2xl border border-emerald-500/25 bg-gradient-to-br from-emerald-500/10 via-slate-900/80 to-slate-950 p-6 md:p-8">
             <p className="text-base italic leading-relaxed text-emerald-50/95 md:text-lg">
-              “Sabemos que lidar com laudos, prazos e repartições pode ser cansativo — e às vezes
+              “Sabemos que lidar com laudos, prazos e repartições pode ser cansativo, e às vezes
               solitário. Nosso trabalho é caminhar junto com você, tirar dúvidas no meio do caminho
               e fazer o que prometemos: levar esse peso com você até a linha de chegada. Quando
               alguém nos agradece dizendo que finalmente conseguiu o carro ou a isenção, a gente
               lembra por que estamos aqui.”
             </p>
             <p className="mt-4 text-sm font-medium text-emerald-200/90">
-              — Equipe Guia PCD Despachante
+              Equipe Guia PCD Despachante
             </p>
           </div>
         </div>

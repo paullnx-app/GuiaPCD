@@ -63,7 +63,7 @@ export default function LeadFormModal() {
       phone: phone.trim(),
       email: email.trim(),
       message: message.trim(),
-      _subject: "Novo lead – Guia PCD",
+      _subject: "Novo lead, Guia PCD",
       _replyto: email.trim(),
       origem: source || "Site",
     });

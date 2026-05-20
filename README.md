@@ -80,8 +80,28 @@ Formulários e resumo do chat enviam via **`POST /api/lead`** usando [Resend](ht
 
 **Teste sem domínio:** com só `RESEND_API_KEY`, o remetente padrão é `onboarding@resend.dev` (só para testes; em produção use o domínio verificado).
 
+## SEO e crawlers
+
+- **`/sitemap.xml`**: gerado por `app/sitemap.ts` (home, sobre, blog e todos os artigos).
+- **`/robots.txt`**: gerado por `app/robots.ts` (permite Google, Bing e principais bots de IA; bloqueia `/api/`).
+- **`/llms.txt`**: gerado por `app/llms.txt/route.ts` (resumo do site para assistentes de IA).
+
+Configure `NEXT_PUBLIC_SITE_URL=https://www.guiapcd.com.br` na Vercel. No Google Search Console e no Bing Webmaster Tools, envie o sitemap: `https://www.guiapcd.com.br/sitemap.xml`.
+
 ## Chat (Lia)
 
 - Antes de conversar, o visitante informa **nome e e-mail** (guardados na sessão do navegador).
-- Botões **Agendar** e **WhatsApp** aparecem **só nas respostas da Lia**, quando ela incluir `[CTA_CALENDLY]` ou `[CTA_WHATSAPP]` — não há botão fixo no cabeçalho do chat.
-- Ao fechar o chat ou sair da página (com **5+ mensagens** na conversa), um **resumo por e-mail** é enviado para `NEXT_PUBLIC_LEAD_EMAIL` com nome, e-mail, transcrição e ID da sessão.
+- O botão **WhatsApp** aparece **só nas respostas da Lia**, quando ela incluir `[CTA_WHATSAPP]` (incluindo pedidos de agendar) — não há botão fixo no cabeçalho do chat.
+- Ao fechar o chat ou sair da página, um **resumo por e-mail** é enviado para `NEXT_PUBLIC_LEAD_EMAIL` sempre que o visitante tiver informado **nome e e-mail** e enviado **pelo menos uma mensagem** (transcrição + ID da sessão).
+
+## Calendly (standby)
+
+Agendamento online via Calendly está **em standby**: o chat e a Lia usam apenas **WhatsApp** (`[CTA_WHATSAPP]`). O código antigo foi mantido para reativar depois, sem apagar.
+
+| Arquivo | Função |
+|--------|--------|
+| `src/lib/calendly.ts` | Lê `NEXT_PUBLIC_CALENDLY_URL` / `CALENDLY_URL` |
+| `app/api/calendly-url/route.ts` | Expõe a URL (não é chamada pelo chat hoje) |
+| `chat-rules.md` | Regras atuais: sem `[CTA_CALENDLY]`, agendar → WhatsApp |
+
+**Para reativar no futuro:** restaurar regras com `[CTA_CALENDLY]` em `chat-rules.md` e `chatRulesBundled.ts`, botão `CtaCalendly` e `fetch("/api/calendly-url")` em `ChatWindow.tsx`, lógica em `app/api/chat/route.ts`, variáveis Calendly na Vercel e deploy.

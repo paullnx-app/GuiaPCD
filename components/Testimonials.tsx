@@ -60,7 +60,7 @@ export default async function Testimonials() {
                 “{r.text}”
               </blockquote>
               <div className="mt-4 border-t border-sky-800/40 pt-3">
-                <p className="text-sm font-semibold text-white">— {r.author}</p>
+                <p className="text-sm font-semibold text-white">{r.author}</p>
                 {r.relativeTime ? (
                   <p className="text-xs text-sky-400/70">{r.relativeTime}</p>
                 ) : null}

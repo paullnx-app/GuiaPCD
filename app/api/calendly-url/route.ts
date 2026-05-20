@@ -1,3 +1,6 @@
+/**
+ * STANDBY — Rota não usada pelo chat (agendamento = WhatsApp). Mantida para reativar Calendly depois.
+ */
 import { getCalendlySchedulingUrl } from "@/src/lib/calendly";
 import { NextResponse } from "next/server";
 
